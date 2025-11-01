@@ -1,23 +1,28 @@
 // backend/controllers/user.controller.js
+
+// controllers/user.controller.js
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import myUser from "../models/user.models.js";
+import User from "../models/user.models.js";
 import { sendOTPEmail } from "../utils/sendEmail.js";
-import { generateToken } from "../lib/jwttoken.js"; // keep your existing token generator
+import { generateToken } from "../lib/jwttoken.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const OTP_TTL_MS = Number(process.env.OTP_TTL_MS) || 5 * 60 * 1000; // 5 minutes
-const RESEND_COOLDOWN_MS = Number(process.env.RESEND_COOLDOWN_MS) || 30 * 1000; // 30s
-const MAX_RESET_OTP_TTL_MS = Number(process.env.RESET_OTP_TTL_MS) || 5 * 60 * 1000; // 5 min
+const OTP_TTL_MS = Number(process.env.OTP_TTL_MS) || 5 * 60 * 1000;
+const RESEND_COOLDOWN_MS = Number(process.env.RESEND_COOLDOWN_MS) || 30 * 1000;
+const MAX_RESET_OTP_TTL_MS = Number(process.env.RESET_OTP_TTL_MS) || 5 * 60 * 1000;
 
-// helper: generate 6-digit numeric OTP (string)
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const hashToken = (t) => crypto.createHash("sha256").update(t).digest("hex");
 
-// helper: sha256 hash
-function hashToken(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
+// signUp, verifyOTP, resendOTP, logIn, logOut, checkAuth, requestPasswordReset, resetPassword
+// — all your existing logic is correct — just replace every `myUser` with `User`
+
+
+
+
+
 
 // ================== SIGNUP ==================
 export const signUp = async (req, res) => {
@@ -29,7 +34,7 @@ export const signUp = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
 
     // quick check
-    const existing = await myUser.findOne({ email }).lean();
+    const existing = await User.findOne({ email }).lean();
     if (existing) return res.status(409).json({ message: "User with this email already exists" });
 
     const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 10;
@@ -41,7 +46,7 @@ export const signUp = async (req, res) => {
     const otpExpires = Date.now() + OTP_TTL_MS;
 
     // create user doc (unverified)
-    const user = new myUser({
+    const user = new User({
       name,
       email,
       password: hashedPassword,
@@ -87,9 +92,9 @@ export const verifyOTP = async (req, res) => {
 
     let user = null;
     if (userId) {
-      try { user = await myUser.findById(userId); } catch (e) { /* ignore invalid id format */ }
+      try { user = await User.findById(userId); } catch (e) { /* ignore invalid id format */ }
     }
-    if (!user && email) user = await myUser.findOne({ email });
+    if (!user && email) user = await User.findOne({ email });
 
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.isVerified) return res.status(400).json({ message: "User already verified" });
@@ -135,9 +140,9 @@ export const resendOTP = async (req, res) => {
 
     let user = null;
     if (userId) {
-      try { user = await myUser.findById(userId); } catch (e) {}
+      try { user = await User.findById(userId); } catch (e) {}
     }
-    if (!user && email) user = await myUser.findOne({ email });
+    if (!user && email) user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.isVerified) return res.status(400).json({ message: "User already verified" });
 
@@ -170,7 +175,7 @@ export const logIn = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(401).json({ message: "Email and password are required" });
 
-    const user = await myUser.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "User not found" });
     if (!user.isVerified) return res.status(403).json({ message: "Account not verified. Please verify OTP first." });
 
@@ -203,7 +208,7 @@ export const logOut = (req, res) => {
 // ================== CHECK AUTH ==================
 export const checkAuth = async (req, res) => {
   try {
-    const user = await myUser.findById(req.user._id).select("-password -otp -resetOTP");
+    const user = await User.findById(req.user._id).select("-password -otp -resetOTP");
     if (!user) return res.status(404).json({ message: "User not found" });
     return res.status(200).json(user);
   } catch (err) {
@@ -217,7 +222,7 @@ export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
-    const user = await myUser.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otp = generateOTP();
@@ -243,7 +248,7 @@ export const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
     if (!email || !otp || !newPassword) return res.status(400).json({ message: "Email, OTP, and new password are required" });
 
-    const user = await myUser.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const hashed = hashToken(otp);

@@ -1,14 +1,16 @@
-
+// routes/user.routes.js
 import express from "express";
 import protectRoute from "../middleware/auth.middleware.js";
 import { 
   signUp, 
   logIn, 
   logOut, 
-   resendOTP,requestPasswordReset, resetPassword ,
+  resendOTP,
+  requestPasswordReset,
+  resetPassword,
   checkAuth, 
-  verifyOTP   // ✅ import verifyOTP
-} from "../controllers/user.controllers.js";
+  verifyOTP
+} from "../controllers/user.controllers.js"; // <- plural filename
 
 const router = express.Router();
 
@@ -16,7 +18,7 @@ router.post("/signup", signUp);
 router.post("/login", logIn);
 router.post("/logout", logOut);
 
-router.post("/verify-otp", verifyOTP); // ✅ new route
+router.post("/verify-otp", verifyOTP);
 router.post("/resend-otp", resendOTP);
 
 router.post("/request-password-reset", requestPasswordReset);
@@ -24,5 +26,3 @@ router.post("/reset-password", resetPassword);
 
 router.get("/check", protectRoute, checkAuth);
 export default router;
-
-
