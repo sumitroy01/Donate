@@ -4,7 +4,7 @@ import { createOrder, verifyPayment } from "../controllers/donationController.js
 const donationRouter = express.Router();
 
 donationRouter.post("/create-order", createOrder);
-ddonationRouter.post("/verify", async (req, res, next) => {
+donationRouter.post("/verify", async (req, res, next) => {
   try {
     await verifyPayment(req, res, next);
   } catch (err) {
